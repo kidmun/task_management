@@ -7,15 +7,16 @@ import (
 	"task_management/services"
 	"github.com/gin-gonic/gin"
 )
-
 func main() {
 	client, err := config.InitDB()
 	if err != nil {
 		log.Fatalf("Database connection error: %v", err)
 	}
 	services.InitTaskCollection(client)
+	services.InitUserCollection(client)
 	router := gin.Default()
 	routes.SetupTaskRoutes(router)
+	routes.SetupUserRoutes(router)
 	router.Run(":8080")
 
 }
