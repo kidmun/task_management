@@ -1,11 +1,11 @@
 package midddlewares
 
 import (
-	
 	"net/http"
 	"strings"
-	"task_management/config"
-	"task_management/services"
+	"task_management/internal/config"
+	"task_management/internal/core/usecase"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +19,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		tokenString := strings.Split(authHeader, "Bearer ")[1]
-		claims := &services.Claims{}
+		claims := &usecase.Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(config.GetEnv("Jwt_Secret")), nil
 		})

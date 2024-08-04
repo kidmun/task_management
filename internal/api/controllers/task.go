@@ -3,23 +3,27 @@ package controllers
 import (
 	"errors"
 	"net/http"
-	"task_management/models"
-	"task_management/services"
-	"task_management/utils"
+	"task_management/internal/core/models"
+	"task_management/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+type TaskController struct {
+	TaskUsecase models.TaskUsecase
+}
 
-func GetTasksHandler(ctx *gin.Context) {
-	tasks, err := services.GetTasks()
+
+
+func (tc *TaskController) GetTasksHandler(ctx *gin.Context) {
+	tasks, err := tc.TaskUsecase.GetTasks(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, tasks)
 }
-func GetTaskHandler(ctx *gin.Context) {
+func (tc *TaskController) GetTaskHandler(ctx *gin.Context) {
 
 	id, err := primitive.ObjectIDFromHex(ctx.Param("id"))
 	if err != nil {
@@ -27,7 +31,7 @@ func GetTaskHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse task id."})
 		return
 	}
-	tasks, err := services.GetTask(id)
+	tasks, err := tc.TaskUsecase.GetTask(ctx, id)
 	if err != nil {
 		if errors.Is(err, errors.New("task not found")) {
 			ctx.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
@@ -39,7 +43,7 @@ func GetTaskHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, tasks)
 }
 
-func CreateTaskHandler(ctx *gin.Context) {
+func (tc *TaskController) CreateTaskHandler(ctx *gin.Context) {
 	var task models.Task
 	err := ctx.ShouldBindJSON(&task)
 	if err != nil {
@@ -52,7 +56,7 @@ func CreateTaskHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid task status"})
 		return
 	}
-	result, err := services.AddTask(task)
+	result, err := tc.TaskUsecase.AddTask(ctx, task)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
@@ -64,7 +68,7 @@ func CreateTaskHandler(ctx *gin.Context) {
 	})
 
 }
-func UpdateTaskHandler(ctx *gin.Context) {
+func (tc *TaskController) UpdateTaskHandler(ctx *gin.Context) {
 	var task models.Task
 	id, err := primitive.ObjectIDFromHex(ctx.Param("id"))
 	if err != nil {
@@ -87,7 +91,7 @@ func UpdateTaskHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse the given data"})
 		return
 	}
-	result, err := services.UpdateTask(id, task)
+	result, err := tc.TaskUsecase.UpdateTask(ctx, id, task)
 	if err != nil {
 		if errors.Is(err, errors.New("task not found")) {
 			ctx.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
@@ -103,13 +107,13 @@ func UpdateTaskHandler(ctx *gin.Context) {
 	})
 }
 
-func DeleteTaskHandler(ctx *gin.Context) {
+func (tc *TaskController) DeleteTaskHandler(ctx *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(ctx.Param("id"))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse task id."})
 		return
 	}
-	result, err := services.DeleteTask(id)
+	result, err := tc.TaskUsecase.DeleteTask(ctx, id)
 	if err != nil {
 		if errors.Is(err, errors.New("task not found")) {
 			ctx.JSON(http.StatusNotFound, gin.H{"message": err.Error()})

@@ -1,10 +1,12 @@
-package services
+package repository
 
 import (
 	"context"
 	"errors"
-	"task_management/config"
-	"task_management/models"
+
+	"task_management/internal/config"
+	"task_management/internal/core/models"
+
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -20,27 +22,37 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-var userCollection *mongo.Collection
-
-func InitUserCollection(client *mongo.Client) {
-	userCollection = client.Database("task_management_db").Collection("users")
+type userRepository struct {
+	database   *mongo.Database
+	collection string
 }
-func FindUserByUsername(username string) (*models.User, error) {
+func NewUserRepository(db *mongo.Database, collection string) models.UserRepository {
+	return &userRepository{
+		database:   db,
+		collection: collection,
+	}
+}
+// var userCollection *mongo.Collection
+
+// func InitUserCollection(client *mongo.Client) {
+// 	userCollection = client.Database("task_management_db").Collection("users")
+// }
+func (ur *userRepository) FindUserByUsername(username string) (*models.User, error) {
 	ctx := context.Background()
 	var user models.User
-	err := userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&user)
+	err := ur.database.Collection(ur.collection).FindOne(ctx, bson.M{"username": username}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
-func CheckPassword(user *models.User, password string) bool {
+func (ur *userRepository) CheckPassword(user *models.User, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	return err == nil
 }
-func RegisterUser(user *models.User) (*models.User, error) {
-	ctx := context.Background()
-	existingUser, err := FindUserByUsername(user.Username)
+func (ur *userRepository) RegisterUser(c context.Context, user models.User) (*models.User, error) {
+	
+	existingUser, err := ur.FindUserByUsername(user.Username)
 	if err == nil && existingUser != nil {
 		return nil, errors.New("username already taken")
 	}
@@ -50,16 +62,16 @@ func RegisterUser(user *models.User) (*models.User, error) {
 	}
 	user.Password = string(hash)
 	user.Role = "NormalUser"
-	_, err = userCollection.InsertOne(ctx, user)
+	_, err = ur.database.Collection(ur.collection).InsertOne(c, user)
 	if err != nil {
 		return nil, err
 	}
-	return user, nil
+	return &user, nil
 }
 
-func LoginUser(userInput *models.UserInput) (string, error) {
-	user, err := FindUserByUsername(userInput.Username)
-	if err != nil || !CheckPassword(user, userInput.Password) {
+func (ur *userRepository) LoginUser(c context.Context, userInput models.UserInput) (string, error) {
+	user, err := ur.FindUserByUsername(userInput.Username)
+	if err != nil || !ur.CheckPassword(user, userInput.Password) {
 		return "", errors.New("wrong Credentials")
 	}
 	expirationTime := time.Now().Add(24 * time.Hour)
@@ -81,9 +93,9 @@ func LoginUser(userInput *models.UserInput) (string, error) {
 
 }
 
-func RegisterAdmin(user *models.User) (*models.User, error) {
-	ctx := context.Background()
-	existingUser, err := FindUserByUsername(user.Username)
+func (ur *userRepository) RegisterAdmin(c context.Context, user models.User) (*models.User, error) {
+	
+	existingUser, err := ur.FindUserByUsername(user.Username)
 	if err == nil && existingUser != nil {
 		return nil, errors.New("username already taken")
 	}
@@ -93,9 +105,9 @@ func RegisterAdmin(user *models.User) (*models.User, error) {
 	}
 	user.Password = string(hash)
 	user.Role = "Admin"
-	_, err = userCollection.InsertOne(ctx, user)
+	_, err = ur.database.Collection(ur.collection).InsertOne(c, user)
 	if err != nil {
 		return nil, err
 	}
-	return user, nil
+	return &user, nil
 }

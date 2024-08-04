@@ -2,7 +2,9 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -10,9 +12,18 @@ import (
 )
 
 func InitDB() (*mongo.Client, error) {
+	if err := os.Chdir(".."); err != nil {
+        log.Fatalf("Error changing directory: %v", err)
+    }
+
 	err := godotenv.Load()
+	fmt.Println("++++++++++++++++++")
+	fmt.Println(os.Getwd())
+	fmt.Println("-------------------")
 	if err != nil {
+		fmt.Println(err)
 		log.Fatalf("Error loading .env file")
+
 		return nil, err
 	}
 	mongoUri := GetEnv("MONGODB_URI")

@@ -1,6 +1,6 @@
 package utils
 
-import "task_management/models"
+import "task_management/internal/core/models"
 
 func IsValidStatus(status models.Status) bool {
 	switch status {
